@@ -1,5 +1,6 @@
 # Unity-AI-AR
-WIP including Medium Post
+
+Start over here: https://medium.com/@MissAmaraKay/build-your-first-ai-ar-app-on-unity-8c12895687fa
 
 ![alt text][shespizza]
 
