@@ -1,3 +1,9 @@
+**BREAKING CHANGES MADE TO SDK**
+This is on my todo list to fix, but it is currently not working with the most recent version in the asset store. Feel free to submit a PR if you would like to help me get it working again.
+
+* Convert Conversation to Assistant service
+* New specifics to implement STT & TTS, check examples in SDK
+
 # Unity-AI-AR
 
 Start over here: https://medium.com/@MissAmaraKay/build-your-first-ai-ar-app-on-unity-8c12895687fa
