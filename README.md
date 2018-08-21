@@ -4,6 +4,9 @@ Start over here: https://medium.com/@MissAmaraKay/build-your-first-ai-ar-app-on-
 
 ![alt text][shespizza]
 
+## Troubleshooting
+You may encounter an error with TLS in newer versions of the SDK. In Player Settings, change the framework to .NET 4.x
+
 ## Configuring Watson Services
 This section is broken up into two different processes, one for Speech-To-Text and Text-To-Speech, the other for Conversation (as it requires a little more work).
 
