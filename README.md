@@ -2,6 +2,8 @@
 
 Start over here: https://medium.com/@MissAmaraKay/build-your-first-ai-ar-app-on-unity-8c12895687fa
 
+Want a more [complete solution](https://github.com/akeller/Starter-AR-Project)?
+
 ![alt text][shespizza]
 
 ## Troubleshooting
