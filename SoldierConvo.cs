@@ -1,7 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using IBM.Watson.DeveloperCloud.Services.Conversation.v1;
+using IBM.Watson.DeveloperCloud.Services.Assistant.v1;
 using IBM.Watson.DeveloperCloud.Services.TextToSpeech.v1;
 using IBM.Watson.DeveloperCloud.Services.SpeechToText.v1;
 using IBM.Watson.DeveloperCloud.Widgets;
@@ -14,31 +14,69 @@ using FullSerializer;
 
 public class SoldierConvo : MonoBehaviour {
 
-	private int _recordingRoutine = 0;
-	private string _microphoneID = null;
-	private AudioClip _recording = null;
-	private int _recordingBufferSize = 2;
-	private int _recordingHZ = 22050;
+    [SerializeField]
+    private string assistantUsername;
+    [SerializeField]
+    private string assistantPassword;
+    [SerializeField]
+    private string assistantURL;
+    [SerializeField]
+    private string assistantWorkspace;
+    [SerializeField]
+    private string SpeechToTextUsername;
+    [SerializeField]
+    private string SpeechToTextPassword;
+    [SerializeField]
+    private string SpeechToTextURL;
+    [SerializeField]
+    private string TextToSpeechUsername;
+    [SerializeField]
+    private string TextToSpeechPassword;
+    [SerializeField]
+    private string TextToSpeechURL;
 
-	private string outputText = "";
-	private Conversation _conversation;
-	private SpeechToText _speechToText;
-	private TextToSpeech _textToSpeech;
-	private string workspace_id = ""; //enter Conversation workspace_id
+    private int _recordingRoutine = 0;
+    private string _microphoneID = null;
+    private AudioClip _recording = null;
+    private int _recordingBufferSize = 2;
+    private int _recordingHZ = 22050;
+    private byte[] _acousticResourceData;
+    private string _acousticResourceMimeType;
 
-	private fsSerializer _serializer = new fsSerializer();
-	private Dictionary<string, object> _context = null;
-	private bool stopListeningFlag = false;
+    private string outputText = "Hello";
+    private Assistant _assistant;
+    private SpeechToText _speechToText;
+    private TextToSpeech _textToSpeech;
+    private bool firstMessage;
+    private bool stopListeningFlag = false;
+
+    private fsSerializer _serializer = new fsSerializer();
+
+    public Dictionary<string, object> inputObj = new Dictionary<string, object>();
+
+	//private Dictionary<string, object> _context = null;
 
 	void Start()
 	{
 		InitializeServices();
-
-		//enter workspace_id as string, this kicks off the conversation
-		if (!_conversation.Message (OnMessage, OnFail, workspace_id, "Hi")) {
-			Log.Debug ("ExampleConversation.Message()", "Failed to message!");
-		}
 	}
+
+    //  Send a message perserving conversation context
+    private Dictionary<string, object> _context; // context to persist
+
+    //  Initiate a conversation
+    private void Message0()
+    {
+        firstMessage = true;
+        inputObj.Add("text", outputText);
+        MessageRequest messageRequest = new MessageRequest()
+        {
+            Input = inputObj
+        };
+
+        if (!_assistant.Message(OnMessage, OnFail, assistantWorkspace, messageRequest))
+            Log.Debug("ExampleAssistant.Message()", "Failed to message!");
+    }
 
 	private void OnMessage(object resp, Dictionary<string, object> customData)
 	{
@@ -62,24 +100,34 @@ public class SoldierConvo : MonoBehaviour {
 			_context = _tempContext as Dictionary<string, object>;
 		else
 			Log.Debug("ExampleConversation.OnMessage()", "Failed to get context");
+		
 
-		//if we get a response, do something with it (find the intents, output text, etc.)
-		if (resp != null && (messageResponse.intents.Length > 0 || messageResponse.entities.Length > 0))
-		{
-			string intent = messageResponse.intents[0].intent;
-			foreach (string WatsonResponse in messageResponse.output.text) {
-				outputText += WatsonResponse + " ";
-			}
-			Debug.Log("Intent/Output Text: " + intent + "/" + outputText);
-			if (intent.Contains("exit")) {
-				stopListeningFlag = true;
-			}
-			CallTTS (outputText);
-			outputText = "";
+        //  Get intent
+        object tempIntentsObj = null;
+        (resp as Dictionary<string, object>).TryGetValue("intents", out tempIntentsObj);
+        object tempIntentObj = (tempIntentsObj as List<object>)[0];
+
+        object tempIntent = null;
+        (tempIntentObj as Dictionary<string, object>).TryGetValue("intent", out tempIntent);
+        string intent = tempIntent.ToString();
+
+        //get Watson Output
+        object tempOutputObj = null;
+        (resp as Dictionary<string, object>).TryGetValue("output", out tempOutputObj);
+        object tempText = null;
+        (tempOutputObj as Dictionary<string, object>).TryGetValue("text", out tempText);
+        string outputText2 = (tempText as List<object>)[0].ToString();
+
+		Debug.Log("Intent/Output Text: " + intent + "/" + outputText2);
+		if (intent.Contains("exit")) {
+			stopListeningFlag = true;
 		}
+        StopRecording();
+		CallTTS (outputText2);
+		outputText = "";
 	}
 
-	private void OnSpeechInput(SpeechRecognitionEvent result)
+    private void OnSpeechInput(SpeechRecognitionEvent result, Dictionary<string, object> customData)
 	{
 		if (result != null && result.results.Length > 0)
 		{
@@ -89,30 +137,32 @@ public class SoldierConvo : MonoBehaviour {
 				{
 					if (res.final && alt.confidence > 0)
 					{
-						string text = alt.transcript;
-						Debug.Log("Result: " + text + " Confidence: " + alt.confidence);
-						BuildSpokenRequest(text);
+                        StopRecording();
+                        string text = alt.transcript;
+                        Debug.Log("Watson hears : " + text + " Confidence: " + alt.confidence);
+                        BuildSpokenRequest(text);
 					}
 				}
 			}
 		}
 	}
 
-	private void BuildSpokenRequest(string spokenText)
-	{
-		MessageRequest messageRequest = new MessageRequest()
-		{
-			input = new Dictionary<string, object>()
-			{
-				{ "text", spokenText }
-			},
-			context = _context
-		};
+    private void BuildSpokenRequest(string spokenText)
+    {
+        MessageRequest messageRequest = new MessageRequest()
+        {
+            Input = new Dictionary<string, object>()
+            {
+                { "text", spokenText }
+            },
+            Context = _context
+        };
 
-		if (_conversation.Message(OnMessage, OnFail, workspace_id, messageRequest))
-			Log.Debug("ExampleConversation.AskQuestion()", "Failed to message!");
-	}
+        if (_assistant.Message(OnMessage, OnFail, assistantWorkspace, messageRequest))
+            Log.Debug("Assistant, Spoken Request", "Failed to message!");
+    }
 
+		
 	private void CallTTS (string outputText)
 	{
 		//Call text to speech
@@ -120,16 +170,7 @@ public class SoldierConvo : MonoBehaviour {
 			Log.Debug("ExampleTextToSpeech.ToSpeech()", "Failed to synthesize!");
 	}
 
-	private void OnSynthesize(AudioClip clip, Dictionary<string, object> customData)
-	{
-		PlayClip(clip);
-
-		if (!stopListeningFlag) {
-			OnListen();
-		}
-	}
-
-	private void PlayClip(AudioClip clip)
+    private void OnSynthesize(AudioClip clip, Dictionary<string, object> customData)
 	{
 		if (Application.isPlaying && clip != null)
 		{
@@ -137,12 +178,24 @@ public class SoldierConvo : MonoBehaviour {
 			AudioSource source = audioObject.AddComponent<AudioSource>();
 			source.spatialBlend = 0.0f;
 			source.loop = false;
+			source.volume = 1.0f;
 			source.clip = clip;
 			source.Play();
 
+            Invoke("RecordAgain", source.clip.length);
 			Destroy(audioObject, clip.length);
 		}
 	}
+
+    private void RecordAgain()
+    {
+        Debug.Log("Played Audio received from Watson Text To Speech");
+        if (!stopListeningFlag)
+        {
+            OnListen();
+        }
+    }
+
 
 	private void OnListen()
 	{
@@ -180,6 +233,7 @@ public class SoldierConvo : MonoBehaviour {
 	{
 		if (_recordingRoutine == 0)
 		{
+            Debug.Log("Started Recording");
 			UnityObjectUtil.StartDestroyQueue();
 			_recordingRoutine = Runnable.Run(RecordingHandler());
 		}
@@ -189,6 +243,7 @@ public class SoldierConvo : MonoBehaviour {
 	{
 		if (_recordingRoutine != 0)
 		{
+            Debug.Log("Stopped Recording");
 			Microphone.End(_microphoneID);
 			Runnable.Stop(_recordingRoutine);
 			_recordingRoutine = 0;
@@ -246,7 +301,7 @@ public class SoldierConvo : MonoBehaviour {
 			}
 			else
 			{
-				// calculate the number of samples remaining until we ready for a block of audio,
+				// calculate the number of samples remaining until we ready for a block of audio, 
 				// and wait that amount of time it will take to record.
 				int remaining = bFirstBlock ? (midPoint - writePos) : (_recording.samples - writePos);
 				float timeRemaining = (float)remaining / (float)_recordingHZ;
@@ -261,18 +316,25 @@ public class SoldierConvo : MonoBehaviour {
 
 	private void InitializeServices()
 	{
-		Credentials credentials = new Credentials (<username>, <password>, "https://gateway.watsonplatform.net/conversation/api");
-		_conversation = new Conversation(credentials);
-		//be sure to give it a Version Date
-		_conversation.VersionDate = "2017-05-26";
+        Credentials credentials = new Credentials(assistantUsername, assistantPassword, assistantURL);
+        _assistant = new Assistant(credentials);
+        //be sure to give it a Version Date
+        _assistant.VersionDate = "2018-02-16";
 
-		Credentials credentials2 = new Credentials(<username>, <password>, "https://stream.watsonplatform.net/text-to-speech/api");
-		_textToSpeech = new TextToSpeech(credentials2);
-		//give Watson a voice type
-		_textToSpeech.Voice = VoiceType.en_US_Allison;
+        Credentials credentials2 = new Credentials(TextToSpeechUsername, TextToSpeechPassword, TextToSpeechURL);
+        _textToSpeech = new TextToSpeech(credentials2);
+        //give Watson a voice type
+        _textToSpeech.Voice = VoiceType.en_US_Allison;
 
-		Credentials credentials3 = new Credentials(<username>, <password>, "https://stream.watsonplatform.net/speech-to-text/api");
-		_speechToText = new SpeechToText(credentials3);
+        Credentials credentials3 = new Credentials(SpeechToTextUsername, SpeechToTextPassword, SpeechToTextURL);
+        _speechToText = new SpeechToText(credentials3);
+
+        // Send first message, create inputObj w/ no context
+        Message0();
+
+        Active = true;
+
+        StartRecording();   // Setup recording
 	}
 
 
