@@ -1,9 +1,3 @@
-**BREAKING CHANGES MADE TO SDK**
-This is on my todo list to fix, but it is currently not working with the most recent version in the asset store. Feel free to submit a PR if you would like to help me get it working again.
-
-* Convert Conversation to Assistant service
-* New specifics to implement STT & TTS, check examples in SDK
-
 # Unity-AI-AR
 
 Start over here: https://medium.com/@MissAmaraKay/build-your-first-ai-ar-app-on-unity-8c12895687fa
@@ -42,14 +36,14 @@ Expand "View credentials" to reveal your username and password. Enter these as s
 
 Repeat the same process for Text-to-Speech.
 
-### Conversation
+### Assistant (previously Conversation)
 Create an IBM Cloud account if you haven't already.
 
-Click "Catalog" in the upper menu. This will take you to the list of available services, platforms, and other offerings on the IBM Cloud. To make it simple, use the column menu and click "Watson" at the very bottom. This will filter the catalog to just show Watson Services.
+Click "Catalog" in the upper menu. This will take you to the list of available services, platforms, and other offerings on the IBM Cloud. To make it simple, use the column menu and click "Watson" at the very bottom. This will filter the catalog to just show Watson Services. **(New menu lists all Watson Services under "AI")**
 
 ![alt text][WatsonCatalogOfferings]
 
-Click on Conversation to start the provisioning of the service.
+Click on Conversation (now Assistant) to start the provisioning of the service.
 
 Name the service, and select a region/location to deploy in. If applicable, choose an organization and space or leave it to the default if you only have one of each.
 
